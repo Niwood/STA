@@ -71,6 +71,7 @@ class DataCluster:
         # Sample
         iterator = range(len(all_files)) if self.num_stocks==0 else range(self.num_stocks)
         files_range = list(range(len(all_files)))
+
         
         for i in tqdm(
             iterator, desc=f'Generating data cluster'

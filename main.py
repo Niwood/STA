@@ -104,7 +104,7 @@ class Backtest:
         self.num_time_steps = 30
 
         # Load model
-        model = self._load_model(model_name)
+        # model = self._load_model(model_name)
 
         data_cluster = DataCluster(
             dataset='realmix',
@@ -117,14 +117,14 @@ class Backtest:
         # train_collection, val_collection = data_cluster.split_collection(0.1)
 
         # Pre-trained cluster model
-        cluster_model_name = str(1623061895)
+        cluster_model_name = str(1623307809)
         path = f'cluster_models/{cluster_model_name}.pkl'        
         self.cluster_model = TimeSeriesKMeans().from_pickle(path)
         self.cluster_model.verbose = False
 
 
         collection = data_cluster.collection
-        MAX_STEPS = 30*12
+        MAX_STEPS = 30*10
         env = StockTradingEnv(collection, 30, max_steps=MAX_STEPS)
 
         # Eval lists
@@ -152,27 +152,32 @@ class Backtest:
 
 
             
-            prediction = model.predict(a)[0]
-            # prediction = [0,0,1]
-            action = np.argmax(prediction)
+            # prediction = model.predict(a)[0]
+            # action = np.argmax(prediction)
 
-            # Buy/sell threshold
-            if action in (1,2):
-                if max(prediction) < 0.95:
-                    action = 0
+            # # Buy/sell threshold
+            # if action in (1,2):
+            #     if max(prediction) < 0.95:
+            #         action = 0
             
 
             # Run through cluster model
-            if action in (1,2):
-                num_features_to_keep = [3,6,7,8,10,11,12,13,14,15]
-                len_for_clustering = 5
-                b = obs['st'][self.num_time_steps-len_for_clustering:,num_features_to_keep]
-                b = b.reshape(1,*b.shape)
-                y_cluster = self.cluster_model.predict(b)
+            # cluster_mapping = {1: [23, 27], 2: [8, 25]}
+            cluster_mapping = {1: [27], 2: [8]}
+            num_features_to_keep = [3,6,7,8,10,11,12,13,14,15]
+            len_for_clustering = 5
+            b = obs['st'][self.num_time_steps-len_for_clustering:,num_features_to_keep]
+            b = b.reshape(1,*b.shape)
+            cl_predict = self.cluster_model.predict(b)
 
-                if y_cluster != action:
-                    action = 0
-
+            if cl_predict in cluster_mapping[1]:
+                prediction = [0,1,0]
+            elif cl_predict in cluster_mapping[2]:
+                prediction = [0,0,1]
+            else:
+                prediction = [1,0,0]
+            
+            action = np.argmax(prediction)
 
             # Step env
             obs, reward, done = env.step(action)

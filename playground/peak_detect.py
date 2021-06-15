@@ -100,5 +100,5 @@ plt.plot(valleys, df[valleys], "^", c='g')
 for i, txt in enumerate(valley_prominences):
     plt.annotate(round(txt,3), (valleys[i], df_st.close.loc[valleys].to_list()[i]))
 
-# plt.show()
-plt.savefig("latest_fig.png")
+plt.show()
+# plt.savefig("latest_fig.png")

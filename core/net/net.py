@@ -46,8 +46,11 @@ physical_devices = tf.config.list_physical_devices('GPU')
 # disable_eager_execution()
 # tf.config.run_functions_eagerly(True)
 
-devices = tf.config.experimental.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(devices[0], True)
+try:
+    devices = tf.config.experimental.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(devices[0], True)
+except:
+    pass
 
 class Net:
 
@@ -108,7 +111,7 @@ class Net:
         st = Conv1D(filters=num_filters, kernel_size=3, strides=1 , padding='same', activation='relu')(st_head)
 
 
-        num_blocks_list = [2, 5, 5, 5, 2]
+        num_blocks_list = [2, 5, 2]
         
         for i in range(len(num_blocks_list)):
             num_blocks = num_blocks_list[i]
@@ -198,7 +201,7 @@ class Net:
             metrics = ['Precision', 'Recall', AUC(curve='PR')]
         )
 
-        tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True)
+        # tf.keras.utils.plot_model(model, to_file='model.png', show_shapes=True)
 
         self.name = datetime.now().strftime("%Y%m%d-%H%M%S")
         log_dir = "logs/fit/" + self.name
@@ -285,10 +288,10 @@ class Net:
         # Get array sizes
         num_of_train_arrays, num_of_val_arrays, train_batches_in_array, val_batches_in_array = self._get_array_size()
         # print('TRAIN:', num_of_train_arrays, train_batches_in_array)
-        num_of_train_arrays = 3
+        num_of_train_arrays = 1
         num_of_val_arrays = 1
-        train_batches_in_array = 2_900
-        val_batches_in_array = 2_900
+        train_batches_in_array = 500
+        val_batches_in_array = 500
 
         train_range = list(range(num_of_train_arrays*train_batches_in_array))
         val_range = list(range(num_of_val_arrays*val_batches_in_array))
@@ -348,7 +351,7 @@ class DataGenerator(Sequence):
         'Generate one batch of data'
         bins = np.arange(0, self.num_of_arrays*self.batches_in_array, self.batches_in_array).tolist()
         array = np.digitize(index,bins) - 1
-        array += 1
+        # array += 1
 
         batch_nums = np.arange(0, self.batches_in_array).tolist() * self.num_of_arrays
         batch_num = batch_nums[index]

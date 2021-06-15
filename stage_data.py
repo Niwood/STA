@@ -54,6 +54,30 @@ class Stager:
         self.num_time_steps = 30 #number of sequences that will be fed into the model
         self.stage_for = 'train' #train or val
 
+
+        # Pre-trained cluster model
+        model_name = str(1623307809)
+        path = f'cluster_models/{model_name}'        
+        self.cluster_model = TimeSeriesKMeans().from_pickle(path+'.pkl')
+        self.cluster_model.verbose = False
+
+        with open(path + '_mapping.pkl', 'rb') as handle:
+            unique_cluster_list = pickle.load(handle)
+
+        # Create cluster mapping
+        self.cluster_mapping = {0:list(), 1:list(), 2:list()}
+        for _action in range(3):
+            for _cluster in range(30): #num clusters
+                try:
+                    if unique_cluster_list[_action][_cluster] > 0.75:
+                        self.cluster_mapping[_action].append(_cluster)
+                except:
+                    pass
+        
+        # print('cluster_mapping: ',self.cluster_mapping)
+        # quit()
+
+
         # Data cluster
         self.dataset = 'realmix'
         self.data_cluster = DataCluster(
@@ -71,27 +95,6 @@ class Stager:
         # Get shape
         self.st_shape, self.lt_shape = self.data_cluster.get_model_shape()
 
-        # Pre-trained cluster model
-        model_name = str(1623103601)
-        path = f'cluster_models/{model_name}'        
-        self.cluster_model = TimeSeriesKMeans().from_pickle(path+'.pkl')
-        self.cluster_model.verbose = False
-
-        with open(path + '_mapping.pkl', 'rb') as handle:
-            unique_cluster_list = pickle.load(handle)
-
-        # Create cluster mapping
-        self.cluster_mapping = {0:list(), 1:list(), 2:list()}
-        for _action in range(3):
-            for _cluster in range(30): #num clusters
-                try:
-                    if unique_cluster_list[_action][_cluster] > 0.5:
-                        self.cluster_mapping[_action].append(_cluster)
-                except:
-                    pass
-        
-        print('cluster_mapping: ',self.cluster_mapping)
-
 
         # Run
         self.run()
@@ -101,7 +104,7 @@ class Stager:
 
         # assert requested_target!=None, 'No requested target was speicifed'
 
-        batches = 5_000
+        batches = 3_000
         samples_per_batch = 64
         self._target_dict = {0:0, 1:0, 2:0}
         batch_dict = {'lt':list(), 'st':list(), 'y':list()}
@@ -115,7 +118,6 @@ class Stager:
             for stock_id in range(len(self.collection)):
 
                 # Sample a data pack
-                
                 self.dp = self.collection[stock_id]
                 df = self.dp.df
 
@@ -159,10 +161,7 @@ class Stager:
                         character = 'none'
                         prominence = 1
 
-                    # aa.plot()
-                    # plt.plot(peaks, aa[peaks], "v", c='r')
-                    # plt.plot(valleys, aa[valleys], "^", c='g')
-                    # plt.show()
+
 
 
                     # Get the df in the span starting from target_index and num_time_steps long
@@ -180,6 +179,7 @@ class Stager:
                         continue
 
 
+
                     # Setup target vector
                     y_target = [0,0,0]
                     max_prominence = 1 #max prominence that are to be consider as 1.0 
@@ -195,32 +195,36 @@ class Stager:
                     elif character == 'none':
                         y_target[0] = 1
 
+                    # print(st_features.shape)
+                    # plt.plot(st_features)
+                    # plt.title()
+                    # plt.savefig("latest_fig.png")
+                    # quit()
+                    # plt.show()
 
                     # Run through cluster model
-                    if np.argmax(y_target) in (1,2):
-                        num_features_to_keep = [3,6,7,8,10,11,12,13,14,15]
-                        len_for_clustering = 5
-                        b = st_features[self.num_time_steps-len_for_clustering:,num_features_to_keep]
-                        b = b.reshape(1,*b.shape)
-                        y_cluster = self.cluster_model.predict(b)
+                    # if np.argmax(y_target) in (1,2):
+                    #     num_features_to_keep = [3,6,7,8,10,11,12,13,14,15]
+                    #     len_for_clustering = 5
+                    #     b = st_features[self.num_time_steps-len_for_clustering:,num_features_to_keep]
+                    #     b = b.reshape(1,*b.shape)
+                    #     y_cluster = self.cluster_model.predict(b)
 
-                        if y_cluster not in self.cluster_mapping[np.argmax(y_target)]:
-                            y_target = [1,0,0]
-                        else:
-                            _y_target = [0,0,0]
-                            _y_target[np.argmax(y_target)] = 1
-                            y_target = _y_target
+                    #     if y_cluster not in self.cluster_mapping[np.argmax(y_target)]:
+                    #         y_target = [1,0,0]
+                    #     else:
+                    #         _y_target = [0,0,0]
+                    #         _y_target[np.argmax(y_target)] = 1
+                    #         y_target = _y_target
                             
-                    else:
-                        y_target = [1,0,0]
+                    # else:
+                    #     y_target = [1,0,0]
                     
-                    # print('CLUSTER PRED:', y_cluster)
-                    # print('TARGET PRED:', y_target)
-
+                    
 
 
                     # SAMPLE PLOT
-                    # if y_target[2] > 0.9 and y_cluster == np.argmax(y_target):
+                    # if y_target[2] > 0.9:
                     #     _close.loc[requested_span[0]:requested_span[1]+30].plot()
                     #     # self.dp.df_st.close.plot()
                     #     plt.axvline(x=target_index)
@@ -237,7 +241,7 @@ class Stager:
                             continue
                     
 
-                    # -COMMITED TO SAVE THE DATA BEYOND THIS POINT-
+                    # -COMMITED TO SAVE THE SAMPLE BEYOND THIS POINT-
 
                     # To keep track of the targets
                     self._target_dict[0] += y_target[0]
